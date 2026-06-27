@@ -39,12 +39,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ── Load Model & Scalers ──────────────────────────────
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 @st.cache_resource
 def load_model():
-    model = tf.keras.models.load_model('weather_cnn_model.h5', compile=False)
+    model = tf.keras.models.load_model(os.path.join(BASE_DIR, 'weather_cnn_model.h5'), compile=False)
     model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-    scaler_X = joblib.load('scaler_X.pkl')
-    scaler_y = joblib.load('scaler_y.pkl')
+    scaler_X = joblib.load(os.path.join(BASE_DIR, 'scaler_X.pkl'))
+    scaler_y = joblib.load(os.path.join(BASE_DIR, 'scaler_y.pkl'))
     return model, scaler_X, scaler_y
 
 model, scaler_X, scaler_y = load_model()
