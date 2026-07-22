@@ -1,5 +1,5 @@
 import os
-import pickle
+import joblib
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -113,10 +113,9 @@ else:
         model = tf.keras.models.load_model(
             os.path.join(base, "weather_cnn_model.h5"), compile=False
         )
-        with open(os.path.join(base, "scaler_X.pkl"), "rb") as f:
-            scaler_X = pickle.load(f)
-        with open(os.path.join(base, "scaler_y.pkl"), "rb") as f:
-            scaler_y = pickle.load(f)
+       import joblib
+            scaler_X = joblib.load(os.path.join(base, "scaler_X.pkl"))
+            scaler_y = joblib.load(os.path.join(base, "scaler_y.pkl"))
         return model, scaler_X, scaler_y
 
     try:
