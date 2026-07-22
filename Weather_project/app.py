@@ -112,9 +112,9 @@ else:
         base = os.path.dirname(__file__)
         model = tf.keras.models.load_model(
             os.path.join(base, "weather_cnn_model.h5"), compile=False
-        )  
-              scaler_X = joblib.load(os.path.join(base, "scaler_X.pkl"))
-            scaler_y = joblib.load(os.path.join(base, "scaler_y.pkl"))
+        )
+        scaler_X = joblib.load(os.path.join(base, "scaler_X.pkl"))
+        scaler_y = joblib.load(os.path.join(base, "scaler_y.pkl"))
         return model, scaler_X, scaler_y
 
     try:
