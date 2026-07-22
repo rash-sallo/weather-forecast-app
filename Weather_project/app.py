@@ -1,205 +1,201 @@
 import streamlit as st
 import numpy as np
-import joblib
-import tensorflow as tf
 import pandas as pd
+import matplotlib.pyplot as plt
+import tensorflow as tf
 
-# ── Page Config ──────────────────────────────────────
+# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Weather Forecasting System",
+    page_title="Weather Forecasting App",
     page_icon="🌤️",
     layout="wide"
 )
 
-# ── Custom Styling ────────────────────────────────────
-st.markdown("""
-<style>
-    .metric-card {
-        background-color: #1a1a2e;
-        border: 1px solid #2d2d44;
-        border-radius: 10px;
-        padding: 20px;
-        text-align: center;
+# ── Sidebar navigation ─────────────────────────────────────────────────────────
+st.sidebar.title("🌦️ Weather Forecasting")
+page = st.sidebar.radio(
+    "Select Model",
+    ["📊 Mutual Information (Feature Selection)", "🧠 CNN Weather Forecasting"]
+)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 1 — MUTUAL INFORMATION
+# ══════════════════════════════════════════════════════════════════════════════
+if page == "📊 Mutual Information (Feature Selection)":
+
+    st.title("📊 Mutual Information – Feature Selection")
+    st.markdown(
+        "Mutual Information (MI) measures the dependency between each "
+        "feature and the target variable (Temperature). Higher MI score = "
+        "more relevant feature."
+    )
+
+    # Real MI scores from project
+    mi_data = {
+        "Feature": [
+            "Dew Point Temp_C",
+            "Press_kPa",
+            "Rel Hum_%",
+            "Visibility_km",
+            "Wind Speed_km/h"
+        ],
+        "MI Score": [1.249577, 0.225829, 0.225591, 0.122104, 0.038495],
+        "Selected": [True, True, True, True, False]
     }
-    .metric-value {
-        font-size: 28px;
-        font-weight: 700;
-        color: #90caf9;
-    }
-    .metric-label {
-        font-size: 13px;
-        color: #aaaaaa;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #16213e;
-    }
-</style>
-""", unsafe_allow_html=True)
+    df_mi = pd.DataFrame(mi_data)
 
-# ── Load Model & Scalers ──────────────────────────────
-import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    col1, col2 = st.columns([1.2, 1])
 
-@st.cache_resource
-def load_model():
-    model = tf.keras.models.load_model(os.path.join(BASE_DIR, 'weather_cnn_model.h5'), compile=False)
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-    scaler_X = joblib.load(os.path.join(BASE_DIR, 'scaler_X.pkl'))
-    scaler_y = joblib.load(os.path.join(BASE_DIR, 'scaler_y.pkl'))
-    return model, scaler_X, scaler_y
-
-model, scaler_X, scaler_y = load_model()
-
-# ── Sidebar Navigation ────────────────────────────────
-st.sidebar.title("🌤️ Navigation")
-page = st.sidebar.radio("Go to", ["Overview", "Predict Temperature", "About the Model"])
-
-st.sidebar.divider()
-st.sidebar.caption("Final Year Project")
-st.sidebar.caption("Computer Science Department")
-
-# ══════════════════════════════════════════════════════
-# PAGE 1: OVERVIEW
-# ══════════════════════════════════════════════════════
-if page == "Overview":
-    st.title("🌤️ Weather Forecasting System")
-    st.markdown("**Mutual Information feature selection + Convolutional Neural Network**")
-    st.divider()
-
-    col1, col2, col3, col4 = st.columns(4)
-
+    # ── Bar chart ──────────────────────────────────────────────────────────────
     with col1:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">4 / 5</div>
-            <div class="metric-label">Features Used</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("MI Score Bar Chart")
+        colors = ["#1f77b4" if sel else "#d62728" for sel in df_mi["Selected"]]
+        fig, ax = plt.subplots(figsize=(7, 4))
+        bars = ax.bar(df_mi["Feature"], df_mi["MI Score"], color=colors)
+        ax.set_title("Mutual Information Scores", fontsize=13, fontweight="bold")
+        ax.set_ylabel("MI Score")
+        ax.set_xlabel("Features")
+        plt.xticks(rotation=20, ha="right")
+        for bar, score in zip(bars, df_mi["MI Score"]):
+            ax.text(bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.01,
+                    f"{score:.4f}", ha="center", va="bottom", fontsize=9)
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor="#1f77b4", label="Selected"),
+            Patch(facecolor="#d62728", label="Not Selected")
+        ]
+        ax.legend(handles=legend_elements)
+        st.pyplot(fig)
 
+    # ── Table ──────────────────────────────────────────────────────────────────
     with col2:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">CNN</div>
-            <div class="metric-label">Model Type</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.subheader("Feature Rankings")
+        df_display = df_mi.copy()
+        df_display["Selected"] = df_display["Selected"].map(
+            {True: "✅ Yes", False: "❌ No"}
+        )
+        st.dataframe(df_display, use_container_width=True, height=230)
 
-    with col3:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">24 hrs</div>
-            <div class="metric-label">Sequence Window</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success(
+            "**Selected Features:**\n"
+            "- Dew Point Temp_C\n"
+            "- Press_kPa\n"
+            "- Rel Hum_%\n"
+            "- Visibility_km"
+        )
+        st.info(
+            "**Excluded Feature:**\n"
+            "- Wind Speed_km/h (MI score too low: 0.0385)"
+        )
 
-    with col4:
-        st.markdown("""
-        <div class="metric-card">
-            <div class="metric-value">Shannon MI</div>
-            <div class="metric-label">Selection Method</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.divider()
-
-    st.subheader("📊 Selected Features (by Mutual Information score)")
-    feat_df = pd.DataFrame({
-        "Rank": [1, 2, 3, 4],
-        "Feature": ["Dew Point Temp (°C)", "Pressure (kPa)", "Relative Humidity (%)", "Visibility (km)"],
-        "Status": ["✅ Selected", "✅ Selected", "✅ Selected", "✅ Selected"]
-    })
-    st.dataframe(feat_df, use_container_width=True, hide_index=True)
-    st.caption("Wind Speed was dropped — its Mutual Information score fell below the 0.1 threshold.")
-
-    st.divider()
-    st.info("👈 Use the sidebar to try a live prediction or read about the model.")
-
-# ══════════════════════════════════════════════════════
-# PAGE 2: PREDICT
-# ══════════════════════════════════════════════════════
-elif page == "Predict Temperature":
-    st.title("🔍 Predict Temperature")
-    st.markdown("Enter current weather conditions to forecast temperature.")
-    st.divider()
-
-    col1, col2 = st.columns(2)
-    with col1:
-        dew_point = st.slider("Dew Point Temp (°C)", -30.0, 25.0, 3.0)
-        humidity  = st.slider("Relative Humidity (%)", 0, 100, 70)
-    with col2:
-        pressure   = st.slider("Pressure (kPa)", 97.0, 104.0, 101.0)
-        visibility = st.slider("Visibility (km)", 0.0, 50.0, 25.0)
-
-    if 'history' not in st.session_state:
-        st.session_state.history = []
-
-    if st.button("🔍 Predict Temperature", use_container_width=True, type="primary"):
-        features = np.array([[dew_point, pressure, humidity, visibility]])
-        features_scaled = scaler_X.transform(features)
-        features_seq = np.repeat(features_scaled, 24, axis=0)
-        features_reshaped = features_seq.reshape(1, 24, features_scaled.shape[1])
-
-        pred_scaled = model.predict(features_reshaped, verbose=0)
-        pred = scaler_y.inverse_transform(pred_scaled)
-        temp = round(float(pred[0][0]), 2)
-
-        if temp < 0:
-            condition, emoji = "Freezing Cold", "🥶"
-        elif temp < 10:
-            condition, emoji = "Cold", "🌨️"
-        elif temp < 20:
-            condition, emoji = "Mild", "🌤️"
-        elif temp < 30:
-            condition, emoji = "Warm", "☀️"
-        else:
-            condition, emoji = "Hot", "🔥"
-
-        st.divider()
-        rcol1, rcol2 = st.columns(2)
-        with rcol1:
-            st.metric("🌡️ Forecasted Temperature", f"{temp} °C")
-        with rcol2:
-            st.metric("Condition", f"{emoji} {condition}")
-
-        st.session_state.history.append({
-            'Dew Point': dew_point, 'Pressure': pressure,
-            'Humidity': humidity, 'Visibility': visibility,
-            'Predicted Temp (°C)': temp
-        })
-
-    if st.session_state.history:
-        st.divider()
-        st.subheader("📋 Prediction History")
-        df = pd.DataFrame(st.session_state.history)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-        st.line_chart(df['Predicted Temp (°C)'])
-
-        if st.button("🗑️ Clear History"):
-            st.session_state.history = []
-            st.rerun()
-
-# ══════════════════════════════════════════════════════
-# PAGE 3: ABOUT
-# ══════════════════════════════════════════════════════
-else:
-    st.title("📖 About the Model")
-    st.divider()
-
+    # ── MI explanation ─────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("How Mutual Information Works")
     st.markdown("""
-    ### Pipeline
+    Mutual Information quantifies how much knowing one variable reduces 
+    uncertainty about another. Formally:
 
-    1. **Data** — Hourly weather records (Temperature, Dew Point, Humidity, Wind Speed, Visibility, Pressure)
-    2. **Feature Selection** — Mutual Information scores each feature's statistical dependency on temperature; features above a 0.1 threshold are kept
-    3. **Sequencing** — The last 24 hourly readings are stacked into one input window
-    4. **Model** — A 1D Convolutional Neural Network learns patterns across the time window to forecast the next hour's temperature
-    5. **Evaluation** — Performance measured with MSE, MAE, and RMSE on a held-out test set
+    > **I(X; Y) = H(Y) − H(Y | X)**
+
+    Where **H(Y)** is the entropy of the target and **H(Y|X)** is the 
+    conditional entropy given the feature X.
+
+    - A score of **0** means the feature is independent of the target.
+    - A **higher score** means the feature is more informative.
+
+    **Dew Point Temp_C** has the highest MI score (1.2496), making it 
+    the most significant predictor of temperature in this dataset.
     """)
 
-    st.divider()
-    st.subheader("⚠️ Limitation")
-    st.warning(
-        "This live demo repeats your single input across the 24-hour window for simplicity. "
-        "In a full deployment, the model would use 24 actual historical hourly readings for a more accurate forecast."
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE 2 — CNN FORECASTING
+# ══════════════════════════════════════════════════════════════════════════════
+else:
+    st.title("🧠 CNN Weather Forecasting Model")
+    st.markdown(
+        "Enter the 4 MI-selected features below. The trained 1D CNN model "
+        "will predict the **temperature (°C)**."
+    )
+
+    @st.cache_resource
+    def load_model():
+        return tf.keras.models.load_model("weather_model.h5")
+
+    try:
+        model = load_model()
+        model_loaded = True
+    except Exception as e:
+        model_loaded = False
+        st.warning(f"Model file not found or failed to load: {e}")
+
+    # ── Input form ─────────────────────────────────────────────────────────────
+    st.subheader("Input Features")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        dew_point = st.number_input(
+            "Dew Point Temp (°C)",
+            min_value=-50.0, max_value=50.0, value=10.0, step=0.1,
+            help="Highest MI score — most influential feature"
+        )
+        pressure = st.number_input(
+            "Pressure (kPa)",
+            min_value=90.0, max_value=110.0, value=101.3, step=0.1
+        )
+
+    with col2:
+        humidity = st.number_input(
+            "Relative Humidity (%)",
+            min_value=0.0, max_value=100.0, value=65.0, step=0.1
+        )
+        visibility = st.number_input(
+            "Visibility (km)",
+            min_value=0.0, max_value=50.0, value=20.0, step=0.1
+        )
+
+    st.markdown("---")
+
+    if st.button("🔍 Predict Temperature", use_container_width=True):
+        if not model_loaded:
+            st.error(
+                "Cannot predict: model file (weather_model.h5) not found. "
+                "Make sure it is in the same directory as app.py."
+            )
+        else:
+            input_data = np.array([[dew_point, pressure, humidity, visibility]])
+            input_data = input_data.reshape((1, 4, 1))
+            prediction = model.predict(input_data)
+            predicted_temp = float(prediction[0][0])
+
+            st.success(f"### 🌡️ Predicted Temperature: **{predicted_temp:.2f} °C**")
+
+            st.subheader("Input Summary")
+            summary_df = pd.DataFrame({
+                "Feature": [
+                    "Dew Point Temp_C",
+                    "Press_kPa",
+                    "Rel Hum_%",
+                    "Visibility_km"
+                ],
+                "Value": [dew_point, pressure, humidity, visibility],
+                "MI Score": [1.249577, 0.225829, 0.225591, 0.122104]
+            })
+            st.dataframe(summary_df, use_container_width=True)
+
+    # ── Model info ─────────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("Model Architecture")
+    st.markdown("""
+    | Layer | Details |
+    |---|---|
+    | Input | Shape (4, 1) — 4 MI-selected features |
+    | Conv1D | 64 filters, kernel size 2, ReLU |
+    | MaxPooling1D | Pool size 2 |
+    | Flatten | — |
+    | Dense | 50 units, ReLU |
+    | Output | 1 unit (Temperature prediction) |
+    """)
+cast."
     )
