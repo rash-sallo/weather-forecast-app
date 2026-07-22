@@ -1,4 +1,5 @@
 import os
+import pickle
 import streamlit as st
 import numpy as np
 import pandas as pd
@@ -107,16 +108,23 @@ else:
     )
 
     @st.cache_resource
-    def load_model():
-        model_path = os.path.join(os.path.dirname(__file__), "weather_cnn_model.h5")
-        return tf.keras.models.load_model(model_path, compile=False)
+    def load_assets():
+        base = os.path.dirname(__file__)
+        model = tf.keras.models.load_model(
+            os.path.join(base, "weather_cnn_model.h5"), compile=False
+        )
+        with open(os.path.join(base, "scaler_X.pkl"), "rb") as f:
+            scaler_X = pickle.load(f)
+        with open(os.path.join(base, "scaler_y.pkl"), "rb") as f:
+            scaler_y = pickle.load(f)
+        return model, scaler_X, scaler_y
 
     try:
-        model = load_model()
+        model, scaler_X, scaler_y = load_assets()
         model_loaded = True
     except Exception as e:
         model_loaded = False
-        st.warning(f"Model file not found or failed to load: {e}")
+        st.warning(f"Failed to load model or scalers: {e}")
 
     st.subheader("Input Features")
     col1, col2 = st.columns(2)
@@ -146,12 +154,13 @@ else:
 
     if st.button("🔍 Predict Temperature", use_container_width=True):
         if not model_loaded:
-            st.error("Cannot predict: model file not found.")
+            st.error("Cannot predict: model or scaler files not found.")
         else:
-            input_data = np.array([[dew_point, pressure, humidity, visibility]])
-            input_data = input_data.reshape((1, 4, 1))
-            prediction = model.predict(input_data)
-            predicted_temp = float(prediction[0][0])
+            input_array = np.array([[dew_point, pressure, humidity, visibility]])
+            input_scaled = scaler_X.transform(input_array)
+            input_seq = np.repeat(input_scaled, 24, axis=0).reshape(1, 24, 4)
+            prediction_scaled = model.predict(input_seq)
+            predicted_temp = float(scaler_y.inverse_transform(prediction_scaled)[0][0])
             st.success(f"### 🌡️ Predicted Temperature: **{predicted_temp:.2f} °C**")
 
             summary_df = pd.DataFrame({
@@ -166,7 +175,7 @@ else:
     st.markdown("""
     | Layer | Details |
     |---|---|
-    | Input | Shape (4, 1) — 4 MI-selected features |
+    | Input | Shape (24, 4) — 24 timesteps, 4 MI-selected features |
     | Conv1D | 64 filters, kernel size 2, ReLU |
     | MaxPooling1D | Pool size 2 |
     | Flatten | — |
