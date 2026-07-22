@@ -1,17 +1,17 @@
+import os
 import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import tensorflow as tf
 
-# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Weather Forecasting App",
     page_icon="🌤️",
     layout="wide"
 )
 
-# ── Sidebar navigation ─────────────────────────────────────────────────────────
 st.sidebar.title("🌦️ Weather Forecasting")
 page = st.sidebar.radio(
     "Select Model",
@@ -30,7 +30,6 @@ if page == "📊 Mutual Information (Feature Selection)":
         "more relevant feature."
     )
 
-    # Real MI scores from project
     mi_data = {
         "Feature": [
             "Dew Point Temp_C",
@@ -46,7 +45,6 @@ if page == "📊 Mutual Information (Feature Selection)":
 
     col1, col2 = st.columns([1.2, 1])
 
-    # ── Bar chart ──────────────────────────────────────────────────────────────
     with col1:
         st.subheader("MI Score Bar Chart")
         colors = ["#1f77b4" if sel else "#d62728" for sel in df_mi["Selected"]]
@@ -60,7 +58,6 @@ if page == "📊 Mutual Information (Feature Selection)":
             ax.text(bar.get_x() + bar.get_width() / 2,
                     bar.get_height() + 0.01,
                     f"{score:.4f}", ha="center", va="bottom", fontsize=9)
-        from matplotlib.patches import Patch
         legend_elements = [
             Patch(facecolor="#1f77b4", label="Selected"),
             Patch(facecolor="#d62728", label="Not Selected")
@@ -68,15 +65,13 @@ if page == "📊 Mutual Information (Feature Selection)":
         ax.legend(handles=legend_elements)
         st.pyplot(fig)
 
-    # ── Table ──────────────────────────────────────────────────────────────────
     with col2:
         st.subheader("Feature Rankings")
         df_display = df_mi.copy()
         df_display["Selected"] = df_display["Selected"].map(
-            {True: "✅ Yes", False: "❌ No"}
+            {True: "Yes", False: "No"}
         )
         st.dataframe(df_display, use_container_width=True, height=230)
-
         st.success(
             "**Selected Features:**\n"
             "- Dew Point Temp_C\n"
@@ -84,30 +79,22 @@ if page == "📊 Mutual Information (Feature Selection)":
             "- Rel Hum_%\n"
             "- Visibility_km"
         )
-        st.info(
-            "**Excluded Feature:**\n"
-            "- Wind Speed_km/h (MI score too low: 0.0385)"
-        )
+        st.info("**Excluded:** Wind Speed_km/h (MI score: 0.0385)")
 
-    # ── MI explanation ─────────────────────────────────────────────────────────
     st.markdown("---")
     st.subheader("How Mutual Information Works")
     st.markdown("""
-    Mutual Information quantifies how much knowing one variable reduces 
-    uncertainty about another. Formally:
+    Mutual Information quantifies how much knowing one variable reduces
+    uncertainty about another:
 
-    > **I(X; Y) = H(Y) − H(Y | X)**
-
-    Where **H(Y)** is the entropy of the target and **H(Y|X)** is the 
-    conditional entropy given the feature X.
+    > **I(X; Y) = H(Y) - H(Y | X)**
 
     - A score of **0** means the feature is independent of the target.
     - A **higher score** means the feature is more informative.
 
-    **Dew Point Temp_C** has the highest MI score (1.2496), making it 
+    **Dew Point Temp_C** has the highest MI score (1.2496), making it
     the most significant predictor of temperature in this dataset.
     """)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE 2 — CNN FORECASTING
@@ -121,9 +108,8 @@ else:
 
     @st.cache_resource
     def load_model():
-        import os
-model_path = os.path.join(os.path.dirname(__file__), "weather_cnn_model.h5")
-return tf.keras.models.load_model(model_path)
+        model_path = os.path.join(os.path.dirname(__file__), "weather_cnn_model.h5")
+        return tf.keras.models.load_model(model_path)
 
     try:
         model = load_model()
@@ -132,7 +118,6 @@ return tf.keras.models.load_model(model_path)
         model_loaded = False
         st.warning(f"Model file not found or failed to load: {e}")
 
-    # ── Input form ─────────────────────────────────────────────────────────────
     st.subheader("Input Features")
     col1, col2 = st.columns(2)
 
@@ -161,32 +146,21 @@ return tf.keras.models.load_model(model_path)
 
     if st.button("🔍 Predict Temperature", use_container_width=True):
         if not model_loaded:
-            st.error(
-                "Cannot predict: model file (weather_model.h5) not found. "
-                "Make sure it is in the same directory as app.py."
-            )
+            st.error("Cannot predict: model file not found.")
         else:
             input_data = np.array([[dew_point, pressure, humidity, visibility]])
             input_data = input_data.reshape((1, 4, 1))
             prediction = model.predict(input_data)
             predicted_temp = float(prediction[0][0])
-
             st.success(f"### 🌡️ Predicted Temperature: **{predicted_temp:.2f} °C**")
 
-            st.subheader("Input Summary")
             summary_df = pd.DataFrame({
-                "Feature": [
-                    "Dew Point Temp_C",
-                    "Press_kPa",
-                    "Rel Hum_%",
-                    "Visibility_km"
-                ],
+                "Feature": ["Dew Point Temp_C", "Press_kPa", "Rel Hum_%", "Visibility_km"],
                 "Value": [dew_point, pressure, humidity, visibility],
                 "MI Score": [1.249577, 0.225829, 0.225591, 0.122104]
             })
             st.dataframe(summary_df, use_container_width=True)
 
-    # ── Model info ─────────────────────────────────────────────────────────────
     st.markdown("---")
     st.subheader("Model Architecture")
     st.markdown("""
