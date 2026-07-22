@@ -109,7 +109,7 @@ else:
     @st.cache_resource
     def load_model():
         model_path = os.path.join(os.path.dirname(__file__), "weather_cnn_model.h5")
-        return tf.keras.models.load_model(model_path)
+        return tf.keras.models.load_model(model_path, compile=False)
 
     try:
         model = load_model()
