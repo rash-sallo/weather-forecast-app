@@ -197,5 +197,3 @@ else:
     | Dense | 50 units, ReLU |
     | Output | 1 unit (Temperature prediction) |
     """)
-cast."
-    )
