@@ -121,7 +121,9 @@ else:
 
     @st.cache_resource
     def load_model():
-        return tf.keras.models.load_model("weather_model.h5")
+        import os
+model_path = os.path.join(os.path.dirname(__file__), "weather_cnn_model.h5")
+return tf.keras.models.load_model(model_path)
 
     try:
         model = load_model()
